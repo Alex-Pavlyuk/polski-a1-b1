@@ -1,3 +1,5 @@
+// Polski A1–B1 · © 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 // Zadania z życia — по одному справжньому документу на модуль (M1–M6: A2, M7–M12: B1)
 
 // ───────────────────────── M1 ─────────────────────────

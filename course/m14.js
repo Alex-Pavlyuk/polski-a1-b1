@@ -1,3 +1,5 @@
+// Polski A1–B1 · © 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 COURSE.module({
   id: "m14",
   n: 14,

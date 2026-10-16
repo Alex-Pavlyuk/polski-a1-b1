@@ -1,3 +1,5 @@
+// Polski A1–B1 · © 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 COURSE.exam({
   title: "Egzamin końcowy B1",
   intro: `<p>Підсумковий іспит перевіряє, чи досягли ви рівня <b>B1</b>. Формат наближений до державного іспиту <i>egzamin certyfikatowy z języka polskiego jako obcego</i>: завдання охоплюють граматику й лексику всіх 12 модулів курсу — від відмінків і виду дієслова до дієприкметників і безособових форм.</p>

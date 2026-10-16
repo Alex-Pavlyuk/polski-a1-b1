@@ -1,3 +1,5 @@
+// Polski A1–B1 · Copyright 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// SPDX-License-Identifier: Apache-2.0
 // Проверка файлов контента курса: node tools/validate.js course/m01.js [course/m02.js ...]
 // Без аргументов проверяет все course/m*.js и course/exam.js.
 const fs = require("fs");

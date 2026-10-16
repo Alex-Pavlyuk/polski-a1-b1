@@ -1,3 +1,5 @@
+// Polski A1–B1 · Copyright 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// SPDX-License-Identifier: Apache-2.0
 // Собирает курс в один HTML-файл: node tools/build.js
 //   dist/polski-a1-b1.html — открыть локально в браузере (полный документ)
 //   dist/artifact.html             — то же без <!doctype>/<head>, для публикации как Artifact

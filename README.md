@@ -2,6 +2,8 @@
 
 *Interaktywny kurs języka polskiego od poziomu A1 do poziomu B1.*
 
+**Автор:** Alex Pavlyuk · [github.com/Alex-Pavlyuk](https://github.com/Alex-Pavlyuk)
+
 Курс для україномовних учнів, які вже мають базу A1: 12 тижнів × 5 уроків (кожен ≤ 30 хвилин),
 контрольний тест A2 після 6-го тижня і підсумковий іспит B1.
 
@@ -73,3 +75,17 @@ src/                  рушій: shell.html, app.css, app.js
 tools/validate.js     перевірка контенту: node tools/validate.js
 tools/build.js        збирання в один HTML: node tools/build.js → dist/
 ```
+
+## Автор і ліцензія
+
+© 2026 **Alex Pavlyuk** ([github.com/Alex-Pavlyuk](https://github.com/Alex-Pavlyuk)). Авторські права на проєкт належать автору.
+
+- **Код** (`src/`, `tools/`) — [Apache License 2.0](LICENSE). Під час поширення коду чи похідних робіт
+  потрібно зберігати файл [NOTICE](NOTICE) з іменем автора й позначати внесені зміни.
+- **Навчальний контент** (`course/`: уроки, тексти, вправи, іспити, діалоги) —
+  [Creative Commons Attribution 4.0 International (CC BY 4.0)](course/LICENSE).
+
+Обидві ліцензії дозволяють будь-яке використання, зокрема комерційне, за умови зазначення автора.
+Приклад підпису під використаними матеріалами:
+
+> Матеріали курсу «Polski A1–B1» © 2026 Alex Pavlyuk, https://github.com/Alex-Pavlyuk/polski-a1-b1 — CC BY 4.0

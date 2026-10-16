@@ -1,3 +1,5 @@
+// Polski A1–B1 · Copyright 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+// SPDX-License-Identifier: Apache-2.0
 (function () {
   "use strict";
 
