@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# локальні налаштування Claude Code
+.claude/
+
+# згенеровані збірки: node tools/build.js
+dist/
+netlify/
+
+node_modules/
