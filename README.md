@@ -97,7 +97,7 @@ npx wrangler deploy
 Оновлення Netlify (потрібен вхід у Netlify; CLI збирає курс за `netlify.toml`):
 
 ```bash
-npx netlify-cli deploy --build --prod
+npx netlify-cli deploy --prod
 ```
 
 ## Структура
