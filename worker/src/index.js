@@ -70,7 +70,7 @@ function cleanTask(b) {
   if (!b || typeof b !== "object") return null;
   const text = str(b.text, LIMITS.text);
   const prompt = str(b.prompt, LIMITS.prompt);
-  if (text.length < 20 || !prompt) return null;
+  if (text.length < 10 || !prompt) return null;
   const level = ["A2", "B1"].includes(b.level) ? b.level : "B1";
   const minWords = Math.max(10, Math.min(400, Number(b.minWords) || 40));
   const maxWords = Math.max(minWords, Math.min(500, Number(b.maxWords) || 200));

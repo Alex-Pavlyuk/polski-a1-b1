@@ -294,6 +294,8 @@ details.box[open] summary { margin-bottom: 10px; }
 .wcheck .box { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line); display: grid; place-items: center; flex: none; }
 .wcheck.on { color: var(--ink); }
 .wcheck.on .box { border-color: var(--good); background: var(--good); color: var(--surface); }
+.wcheck .box .ic { visibility: hidden; }
+.wcheck.on .box .ic { visibility: visible; }
 .usechip { padding: 3px 10px; border-radius: 99px; border: 1.5px dashed var(--line); font-size: 0.9rem; }
 .usechip.on { border-style: solid; border-color: var(--good); background: var(--good-soft); }
 .wc { font-variant-numeric: tabular-nums; font-size: 0.88rem; color: var(--ink-2); }

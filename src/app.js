@@ -197,7 +197,13 @@
     if (e && e.code === "rate_limited") return "Забагато перевірок поспіль. Зачекайте хвилину й спробуйте знову.";
     if (e && e.status === 503) return "Безкоштовний ліміт AI-перевірок на сьогодні вичерпано або модель тимчасово недоступна. Спробуйте пізніше.";
     if (e && e.status === 502) return "Модель відповіла в неочікуваному форматі. Натисніть ще раз.";
+    if (e && e.status === 400) return "Текст надто короткий для оцінювання. Напишіть хоча б кілька речень.";
     return "Не вдалося зв’язатися із сервісом перевірки. Перевірте інтернет і спробуйте ще раз.";
+  }
+  // a review of a text shorter than the task asks for: say so above the grade
+  function shortNotice(out, n, w) {
+    if (n >= w.minWords) return;
+    out.insertBefore(h("div", { class: "notice" }, "Текст коротший, ніж потрібно в завданні: " + n + " з " + w.minWords + "–" + w.maxWords + " слів. Через це оцінка нижча — допишіть твір і перевірте ще раз."), out.firstChild);
   }
   function renderLT(out, text, matches) {
     if (!matches.length) { fill(out, feedback("ok", "Dobrze!", "LanguageTool не знайшов помилок. Автоматична перевірка ловить не все, тож порівняйте текст і зі зразком.")); return; }
@@ -224,7 +230,7 @@
     const lt = h("button", { class: "btn", type: "button" }, icon("check"), "Граматика (LanguageTool)");
     lt.addEventListener("click", async () => {
       const text = o.text();
-      if (countWords(text) < 5) { toast("Напишіть хоча б одне речення."); return; }
+      if (countWords(text) < 5) { toast("Для перевірки напишіть хоча б 5 слів (зараз " + countWords(text) + ")."); return; }
       lt.disabled = true; fill(o.ltOut, h("div", { class: "thinking" }, "LanguageTool перевіряє текст…"));
       try { renderLT(o.ltOut, text, await ltCheck(text)); }
       catch (e) { fill(o.ltOut, h("div", { class: "notice" }, extErrText(e))); }
@@ -234,11 +240,13 @@
     const ai = h("button", { class: "btn primary", type: "button" }, icon("spark"), "Оцінити твір (AI)");
     ai.addEventListener("click", async () => {
       const text = o.text();
-      if (countWords(text) < Math.min(15, o.w.minWords)) { toast("Напишіть хоча б кілька речень."); return; }
+      const n = countWords(text);
+      if (n < 5) { toast("Для оцінювання напишіть хоча б 5 слів (зараз " + n + ")."); return; }
       ai.disabled = true; fill(o.out, h("div", { class: "thinking" }, "AI-екзаменатор читає ваш текст… зазвичай 10–30 секунд."));
       try {
         const rv = await workerReview({ text: text, prompt: o.w.prompt, level: o.level, minWords: o.w.minWords, maxWords: o.w.maxWords, useWords: o.w.useWords || [], topic: o.topic });
         renderReview(o.out, rv);
+        shortNotice(o.out, n, o.w);
         put(o.out, h("p", { class: "small muted" }, "Оцінку дала відкрита модель Gemma (Cloudflare Workers AI). Вона може помилятися — звіряйтеся зі зразком."));
         o.onReview(rv);
       } catch (e) { fill(o.out, h("div", { class: "notice" }, extErrText(e))); }
@@ -1520,7 +1528,7 @@
       const save = (s, review) => { run.answers[key] = { s: s, given: countWords(ta.value) + " слів", review: review }; Store.data.drafts[X.draft] = ta.value; Store.save(); upd(); };
       const check = aiShow(h("button", { class: "btn primary", type: "button" }, icon("spark"), "Надіслати на оцінювання Claude"));
       check.addEventListener("click", async () => {
-        if (countWords(ta.value) < 40) { toast("Текст надто короткий."); return; }
+        if (countWords(ta.value) < 40) { toast("Для оцінювання іспитового твору потрібно хоча б 40 слів (зараз " + countWords(ta.value) + ")."); return; }
         check.disabled = true;
         const lvl = X.draft === "exam" ? "B1" : "A2";
         fill(out, h("div", { class: "thinking" }, "Claude оцінює роботу за критеріями " + lvl + "…"));
@@ -1537,7 +1545,7 @@
       const boxes = crit.map(c => { const cb = h("input", { type: "checkbox" }); return { cb, el: h("label", { class: "wcheck" }, cb, c) }; });
       const self = h("button", { class: "btn", type: "button" }, "Оцінити самостійно");
       self.addEventListener("click", () => {
-        if (countWords(ta.value) < 40) { toast("Текст надто короткий."); return; }
+        if (countWords(ta.value) < 40) { toast("Для оцінювання іспитового твору потрібно хоча б 40 слів (зараз " + countWords(ta.value) + ")."); return; }
         const n = boxes.filter(b => b.cb.checked).length;
         save(n / crit.length, null); toast("Самооцінку збережено: " + n + " з " + crit.length);
       });
@@ -1698,13 +1706,14 @@
     const check = aiShow(h("button", { class: "btn primary", type: "button" }, icon("spark"), "Перевірити з Claude"));
     check.addEventListener("click", async () => {
       const text = ta.value.trim();
-      if (countWords(text) < Math.min(15, w.minWords)) { toast("Напишіть хоча б кілька речень."); ta.focus(); return; }
+      if (countWords(text) < 5) { toast("Для перевірки напишіть хоча б 5 слів (зараз " + countWords(text) + ")."); ta.focus(); return; }
       saveDraft();
       check.disabled = true;
       fill(out, h("div", { class: "thinking" }, "Claude читає ваш текст… зазвичай це займає до хвилини."));
       try {
         const rv = sanitizeReview(await AI.fn.json(writingPrompt(o.level, w, o.topic, text)));
         renderReview(out, rv);
+        shortNotice(out, countWords(text), w);
         o.onReview(rv, countWords(text));
       } catch (e) { fill(out, h("div", { class: "notice" }, AI.errText(e) || "Перевірку зупинено.")); }
       check.disabled = false;
