@@ -12,3 +12,7 @@ node_modules/
 
 # локальний кеш Cloudflare Wrangler (містить дані акаунта)
 .wrangler/
+
+# Netlify: локальна прив’язка CLI та тека збирання
+.netlify/
+_site/

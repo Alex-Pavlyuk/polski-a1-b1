@@ -1,0 +1,8 @@
+# Polski A1–B1 · Copyright 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+# Збирання для Netlify (https://polski-kurs.netlify.app): ті самі кроки, що й для GitHub Pages.
+[build]
+  command = "node tools/validate.js && node tools/build.js && mkdir -p _site && cp dist/polski-a1-b1.html _site/index.html"
+  publish = "_site"
+
+[build.environment]
+  NODE_VERSION = "24"

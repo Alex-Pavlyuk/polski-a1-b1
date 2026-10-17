@@ -6,7 +6,9 @@
 // (довільні промпти не приймаються) і повертає оцінку в тому самому форматі, що й Claude у курсі.
 
 const MODEL = "@cf/google/gemma-4-26b-a4b-it";
-const ALLOWED_ORIGINS = ["https://alex-pavlyuk.github.io"];
+// Free-model checks are for the public builds only (GitHub Pages, Netlify); the claude.ai version uses Claude itself.
+const ALLOWED_ORIGINS = ["https://alex-pavlyuk.github.io", "https://polski-kurs.netlify.app"];
+const NETLIFY_PREVIEW = /^https:\/\/[a-z0-9-]+--polski-kurs\.netlify\.app$/;
 const LIMITS = { text: 4000, prompt: 1500, topic: 200, word: 40, words: 10 };
 
 export default {
@@ -54,7 +56,7 @@ export default {
 };
 
 function corsHeaders(origin) {
-  const ok = ALLOWED_ORIGINS.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  const ok = ALLOWED_ORIGINS.includes(origin) || NETLIFY_PREVIEW.test(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
   const h = { "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", "Vary": "Origin" };
   if (ok) h["Access-Control-Allow-Origin"] = origin;
   return h;
