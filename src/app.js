@@ -224,17 +224,21 @@
         h("span", { class: "y" }, m.message), m.cat ? h("span", { class: "small muted" }, m.cat) : null))),
       h("p", { class: "small muted" }, "Пояснення LanguageTool — польською. Автоматична перевірка знаходить не всі помилки й іноді помиляється."));
   }
-  // grammar (LanguageTool) + AI grade (Cloudflare Worker) buttons for a writing box; returns [] inside claude.ai
+  // AI grade (Cloudflare Worker) + grammar (LanguageTool) buttons for a writing box; returns [] inside claude.ai.
+  // The AI check comes first; the grammar check stays disabled and is offered only as a fallback once the AI check fails.
   function externalCheckButtons(o) {
     if (!EXTERNAL) return [];
-    const lt = h("button", { class: "btn", type: "button" }, icon("check"), "Граматика (LanguageTool)");
+    let ltOn = !REVIEW_API;
+    const lt = h("button", { class: "btn", type: "button", disabled: !ltOn, title: ltOn ? null : "Стане доступною, якщо AI-перевірка не спрацює" }, icon("check"), "Граматика (LanguageTool)");
+    const enableLt = () => { ltOn = true; lt.disabled = false; lt.removeAttribute("title"); };
     lt.addEventListener("click", async () => {
+      if (!ltOn) return;
       const text = o.text();
       if (countWords(text) < 5) { toast("Для перевірки напишіть хоча б 5 слів (зараз " + countWords(text) + ")."); return; }
       lt.disabled = true; fill(o.ltOut, h("div", { class: "thinking" }, "LanguageTool перевіряє текст…"));
       try { renderLT(o.ltOut, text, await ltCheck(text)); }
       catch (e) { fill(o.ltOut, h("div", { class: "notice" }, extErrText(e))); }
-      setTimeout(() => { lt.disabled = false; }, 3000);
+      setTimeout(() => { lt.disabled = !ltOn; }, 3000);
     });
     if (!REVIEW_API) return [lt];
     const ai = h("button", { class: "btn primary", type: "button" }, icon("spark"), "Оцінити твір (AI)");
@@ -249,10 +253,13 @@
         shortNotice(o.out, n, o.w);
         put(o.out, h("p", { class: "small muted" }, "Оцінку дала відкрита модель Gemma (Cloudflare Workers AI). Вона може помилятися — звіряйтеся зі зразком."));
         o.onReview(rv);
-      } catch (e) { fill(o.out, h("div", { class: "notice" }, extErrText(e))); }
+      } catch (e) {
+        enableLt();
+        fill(o.out, h("div", { class: "notice" }, "Безкоштовна AI-модель зараз перевантажена. Скористайтеся перевіркою граматики (LanguageTool) — кнопку вже активовано. AI-оцінку можна спробувати ще раз пізніше."));
+      }
       ai.disabled = false;
     });
-    return [lt, ai];
+    return [ai, lt];
   }
 
   // ───────────────────────── speech ─────────────────────────
