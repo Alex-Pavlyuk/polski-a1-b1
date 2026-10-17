@@ -1,0 +1,18 @@
+# Polski A1–B1 · Copyright 2026 Alex Pavlyuk (https://github.com/Alex-Pavlyuk)
+# Cloudflare Worker для перевірки творів. Деплой: cd worker && npx wrangler deploy
+name = "polski-essay-review"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Workers AI: безкоштовно 10 000 Neurons на добу; на плані Free понад ліміт запити просто відхиляються (без оплати).
+[ai]
+binding = "AI"
+
+# Не більше 6 перевірок на хвилину з однієї IP-адреси.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 6
+  period = 60

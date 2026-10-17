@@ -170,6 +170,83 @@
   };
   function aiShow(el) { el.setAttribute("data-ai", ""); el.hidden = !AI.ready; return el; }
 
+  // ───────────────────────── external checkers ─────────────────────────
+  // Only outside claude.ai (GitHub Pages, local build): the claude.ai viewer blocks requests to other hosts.
+  // REVIEW_API — the Cloudflare Worker from worker/ (POST /review); empty string hides the AI essay check.
+  const REVIEW_API = "https://polski-essay-review.polskia1b1.workers.dev/review";
+  const EXTERNAL = !window.claude;
+  const LT_API = "https://api.languagetool.org/v2/check";
+  async function ltCheck(text) {
+    const r = await fetch(LT_API, { method: "POST", body: new URLSearchParams({ text: text, language: "pl-PL", motherTongue: "uk-UA" }) });
+    if (r.status === 429) throw { code: "rate_limited" };
+    if (!r.ok) throw { code: "http" };
+    const d = await r.json();
+    return (d.matches || []).map(m => ({
+      offset: m.offset, length: m.length, message: m.message || m.shortMessage || "",
+      repl: (m.replacements || []).slice(0, 3).map(x => x.value),
+      cat: m.rule && m.rule.category ? m.rule.category.name : ""
+    }));
+  }
+  async function workerReview(payload) {
+    const r = await fetch(REVIEW_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (r.status === 429) throw { code: "rate_limited" };
+    if (!r.ok) throw { code: "http", status: r.status };
+    return sanitizeReview(await r.json());
+  }
+  function extErrText(e) {
+    if (e && e.code === "rate_limited") return "Забагато перевірок поспіль. Зачекайте хвилину й спробуйте знову.";
+    if (e && e.status === 503) return "Безкоштовний ліміт AI-перевірок на сьогодні вичерпано або модель тимчасово недоступна. Спробуйте пізніше.";
+    if (e && e.status === 502) return "Модель відповіла в неочікуваному форматі. Натисніть ще раз.";
+    return "Не вдалося зв’язатися із сервісом перевірки. Перевірте інтернет і спробуйте ще раз.";
+  }
+  function renderLT(out, text, matches) {
+    if (!matches.length) { fill(out, feedback("ok", "Dobrze!", "LanguageTool не знайшов помилок. Автоматична перевірка ловить не все, тож порівняйте текст і зі зразком.")); return; }
+    const marked = h("div", { class: "lt-text" });
+    let pos = 0;
+    matches.slice().sort((a, b) => a.offset - b.offset).forEach(m => {
+      if (m.offset < pos) return;
+      add(marked, text.slice(pos, m.offset));
+      add(marked, h("mark", { class: "lt-err", title: m.message + (m.repl.length ? " → " + m.repl.join(" / ") : "") }, text.slice(m.offset, m.offset + m.length)));
+      pos = m.offset + m.length;
+    });
+    add(marked, text.slice(pos));
+    fill(out,
+      h("div", { class: "eyebrow" }, "LanguageTool · можливих помилок: " + matches.length),
+      marked,
+      h("div", { class: "corrs" }, matches.map(m => h("div", { class: "corr-row" },
+        h("span", null, h("span", { class: "w" }, text.slice(m.offset, m.offset + m.length) || "…"), m.repl.length ? ["  →  ", h("span", { class: "r" }, m.repl.join(" / "))] : null),
+        h("span", { class: "y" }, m.message), m.cat ? h("span", { class: "small muted" }, m.cat) : null))),
+      h("p", { class: "small muted" }, "Пояснення LanguageTool — польською. Автоматична перевірка знаходить не всі помилки й іноді помиляється."));
+  }
+  // grammar (LanguageTool) + AI grade (Cloudflare Worker) buttons for a writing box; returns [] inside claude.ai
+  function externalCheckButtons(o) {
+    if (!EXTERNAL) return [];
+    const lt = h("button", { class: "btn", type: "button" }, icon("check"), "Граматика (LanguageTool)");
+    lt.addEventListener("click", async () => {
+      const text = o.text();
+      if (countWords(text) < 5) { toast("Напишіть хоча б одне речення."); return; }
+      lt.disabled = true; fill(o.ltOut, h("div", { class: "thinking" }, "LanguageTool перевіряє текст…"));
+      try { renderLT(o.ltOut, text, await ltCheck(text)); }
+      catch (e) { fill(o.ltOut, h("div", { class: "notice" }, extErrText(e))); }
+      setTimeout(() => { lt.disabled = false; }, 3000);
+    });
+    if (!REVIEW_API) return [lt];
+    const ai = h("button", { class: "btn primary", type: "button" }, icon("spark"), "Оцінити твір (AI)");
+    ai.addEventListener("click", async () => {
+      const text = o.text();
+      if (countWords(text) < Math.min(15, o.w.minWords)) { toast("Напишіть хоча б кілька речень."); return; }
+      ai.disabled = true; fill(o.out, h("div", { class: "thinking" }, "AI-екзаменатор читає ваш текст… зазвичай 10–30 секунд."));
+      try {
+        const rv = await workerReview({ text: text, prompt: o.w.prompt, level: o.level, minWords: o.w.minWords, maxWords: o.w.maxWords, useWords: o.w.useWords || [], topic: o.topic });
+        renderReview(o.out, rv);
+        put(o.out, h("p", { class: "small muted" }, "Оцінку дала відкрита модель Gemma (Cloudflare Workers AI). Вона може помилятися — звіряйтеся зі зразком."));
+        o.onReview(rv);
+      } catch (e) { fill(o.out, h("div", { class: "notice" }, extErrText(e))); }
+      ai.disabled = false;
+    });
+    return [lt, ai];
+  }
+
   // ───────────────────────── speech ─────────────────────────
   const Speech = {
     voices: [], all: 0, voice: null, ok: "speechSynthesis" in window, current: null, warned: false,
@@ -1445,9 +1522,10 @@
       check.addEventListener("click", async () => {
         if (countWords(ta.value) < 40) { toast("Текст надто короткий."); return; }
         check.disabled = true;
-        fill(out, h("div", { class: "thinking" }, "Claude оцінює роботу за критеріями B1…"));
+        const lvl = X.draft === "exam" ? "B1" : "A2";
+        fill(out, h("div", { class: "thinking" }, "Claude оцінює роботу за критеріями " + lvl + "…"));
         try {
-          const res = await AI.fn.json(writingPrompt("B1", w, "підсумковий іспит B1", ta.value.trim()));
+          const res = await AI.fn.json(writingPrompt(lvl, w, lvl === "B1" ? "підсумковий іспит B1" : "контрольний тест A2", ta.value.trim()));
           const rv = sanitizeReview(res);
           renderReview(out, rv);
           save((rv.grade - 1) / 5, rv);
@@ -1463,11 +1541,14 @@
         const n = boxes.filter(b => b.cb.checked).length;
         save(n / crit.length, null); toast("Самооцінку збережено: " + n + " з " + crit.length);
       });
+      const ltOut = h("div", { class: "review-out" });
+      const ext = externalCheckButtons({ w: w, level: X.draft === "exam" ? "B1" : "A2", topic: X.draft === "exam" ? "підсумковий іспит B1" : "контрольний тест A2", out: out, ltOut: ltOut,
+        text: () => { Store.data.drafts[X.draft] = ta.value; Store.save(); return ta.value.trim(); }, onReview: rv => save((rv.grade - 1) / 5, rv) });
       return h("div", { class: "stack" },
         h("div", { class: "prompt" }, w.prompt),
         w.useWords && w.useWords.length ? h("div", { class: "chips" }, w.useWords.map(u => h("span", { class: "usechip" }, u))) : null,
-        ta, h("div", { class: "row between" }, wc, check), out,
-        h("details", { class: "box" }, h("summary", null, "Самооцінка (якщо перевірка Claude недоступна)"), h("div", { class: "wchecks" }, boxes.map(b => b.el)), h("div", { class: "row" }, self), h("details", { class: "box" }, h("summary", null, "Зразок відповіді"), h("div", { class: "model" }, w.model))));
+        ta, h("div", { class: "row between" }, wc, h("div", { class: "row" }, check, ext)), ltOut, out,
+        h("details", { class: "box" }, h("summary", null, ext.length > 1 ? "Самооцінка (якщо AI-перевірка недоступна)" : "Самооцінка (якщо перевірка Claude недоступна)"), h("div", { class: "wchecks" }, boxes.map(b => b.el)), h("div", { class: "row" }, self), h("details", { class: "box" }, h("summary", null, "Зразок відповіді"), h("div", { class: "model" }, w.model))));
     },
     examResult(sheet, id, X) {
       const E = C.exams[id], run = X.run;
@@ -1634,13 +1715,16 @@
       if (n < Math.round(w.minWords * 0.6)) { toast("Текст надто короткий: " + n + " з " + w.minWords + " слів."); return; }
       saveDraft(); o.onDone(n);
     });
+    const ltOut = h("div", { class: "review-out" });
+    const ext = externalCheckButtons({ w: w, level: o.level, topic: o.topic, out: out, ltOut: ltOut,
+      text: () => { saveDraft(); return ta.value.trim(); }, onReview: rv => o.onReview(rv, countWords(ta.value)) });
     return h("div", { class: "stack" },
       h("div", { class: "prompt" }, w.prompt),
       uses.length ? h("div", { class: "stack" }, h("span", { class: "small muted" }, "Використайте слова:"), h("div", { class: "chips" }, uses.map(x => x.el))) : null,
       checks.length ? h("div", { class: "wchecks" }, checks.map(x => x.el)) : null,
-      ta, h("div", { class: "row between" }, wc, h("div", { class: "row" }, check, finish)),
-      AI.ready ? null : h("p", { class: "small muted" }, "Порівняйте свій текст зі зразком. У версії курсу на claude.ai текст можна надіслати на перевірку Claude."),
-      out,
+      ta, h("div", { class: "row between" }, wc, h("div", { class: "row" }, check, ext, finish)),
+      AI.ready || ext.length ? null : h("p", { class: "small muted" }, "Порівняйте свій текст зі зразком. У версії курсу на claude.ai текст можна надіслати на перевірку Claude."),
+      ltOut, out,
       h("details", { class: "box" }, h("summary", null, "Показати зразок"), h("div", { class: "model pl" }, w.model)));
   }
 
